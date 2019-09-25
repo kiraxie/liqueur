@@ -711,3 +711,17 @@ class Liqueur:
             None
         '''
         self.__add_hook_callback(self.__best_five_delegation, f, 0)
+
+    def message(self, message_str):
+        ''' External message interface.
+
+        Args:
+            [string]message: Message that you want to send.
+
+        Returns:
+            None
+
+        Raises:
+            None
+        '''
+        self.__message(message=message_str)
