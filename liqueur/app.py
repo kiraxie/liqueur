@@ -526,7 +526,7 @@ class Liqueur:
         return decorator
 
     def append_time_delegate(self, f):
-        ''' function way to hook the time callback function.
+        ''' Function way to hook the time callback function.
 
         These functions will be excuted when time event was triggered.
 
@@ -564,7 +564,7 @@ class Liqueur:
         return decorator
 
     def append_message_delegate(self, f):
-        ''' function way to hook the message callback function.
+        ''' Function way to hook the message callback function.
 
         By default, the application DOES NOT print or log any message,
         so the developer can choose what it does when message pops out.
@@ -595,7 +595,7 @@ class Liqueur:
         return decorator
 
     def append_quote_delegate(self, f):
-        ''' function way to hook the quote callback function.
+        ''' Function way to hook the quote callback function.
 
         Args:
             (function point)func: Function pointer
@@ -622,7 +622,7 @@ class Liqueur:
         return decorator
 
     def append_tick_delegate(self, f):
-        ''' function way to hook the tick callback function.
+        ''' Function way to hook the tick callback function.
 
         Args:
             (function point)func: Function pointer
@@ -649,7 +649,7 @@ class Liqueur:
         return decorator
 
     def append_kbar_delegate(self, f):
-        ''' function way to hook the K bar callback function.
+        ''' Function way to hook the K bar callback function.
 
         Args:
             (function point)func: Function pointer
@@ -677,7 +677,7 @@ class Liqueur:
         return decorator
 
     def append_best_five_delegate(self, f):
-        ''' function way to hook the best five prices callback function.
+        ''' Function way to hook the best five prices callback function.
 
         Args:
             (function point)func: Function pointer
