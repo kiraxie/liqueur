@@ -125,7 +125,7 @@ class Liqueur:
             err_ret = True
 
         if message != '' and ret_code == -1:
-            Liqueur.excute_delegation(self.__message_delegation, message + end)
+            self.__excute_delegation(self.__message_delegation, message + end)
 
         return err_ret
 
@@ -294,6 +294,28 @@ class Liqueur:
 
         delegation_map[rule] = func
 
+    def __excute_delegation(self, delegation, *argv):
+        ''' Excutes the delegation group functions.
+
+        Args:
+            (dictionary)delegation: The delegation group object.
+
+        Returns:
+            None
+
+        Raises:
+            TypeError: The delegation in invalid type.
+        '''
+        if not isinstance(delegation, dict):
+            raise TypeError('The delegation group must be dictionary object')
+
+        if len(delegation) == 0:
+            return
+
+        for rule, func in sorted(delegation.items(), key=lambda d: d[0]):
+            if func is not None:
+                func(*argv)
+
     def __init__(self, conf):
         ''' Liqueur application constructor
 
@@ -343,7 +365,7 @@ class Liqueur:
         ''' Detail in offical document 4-4-g'''
         dt = datetime.combine(datetime.now(), datetime.strptime(
             (('%d:%d:%d') % (sHour, sMinute, sSecond)), '%H:%M:%S').time())
-        Liqueur.excute_delegation(self.__time_delegation, dt)
+        self.__excute_delegation(self.__time_delegation, dt)
 
     def OnConnection(self, nKind, nCode):
         ''' Detail in offical document 4-4-a'''
@@ -396,7 +418,7 @@ class Liqueur:
                                            bid_price, bid_qty, ask_price, ask_qty, buy_qty, sell_qty, tick_qty,
                                            total_qty, ref_qty, ref_price, up_price, down_price, simulate)
 
-        Liqueur.excute_delegation(self.__quote_delegation, stock_quote)
+        self.__excute_delegation(self.__quote_delegation, stock_quote)
 
     def OnNotifyTicks(self, sMarketNo, sIndex, nPtr, nDate, nTimehms, nTimemillismicros, nBid, nAsk, nClose, nQty,
                       nSimulate):
@@ -414,7 +436,7 @@ class Liqueur:
 
         tick = Tick.from_tick(nDate, nTimehms, nTimemillismicros,
                               orderbook_id, name, bid, ask, close, nQty, nSimulate)
-        Liqueur.excute_delegation(self.__tick_delegation, tick)
+        self.__excute_delegation(self.__tick_delegation, tick)
 
     def OnNotifyHistoryTicks(self, sMarketNo, sIndex, nPtr, nDate, nTimehms, nTimemillismicros, nBid, nAsk, nClose,
                              nQty, nSimulate):
@@ -432,12 +454,12 @@ class Liqueur:
 
         tick = Tick.from_tick(nDate, nTimehms, nTimemillismicros,
                               orderbook_id, name, bid, ask, close, nQty, nSimulate)
-        Liqueur.excute_delegation(self.__tick_delegation, tick)
+        self.__excute_delegation(self.__tick_delegation, tick)
 
     def OnNotifyKLineData(self, bstrStockNo, bstrData):
         ''' Detail in offical document 4-4-f'''
         kbar = KBar.from_kbar_string(bstrData)
-        Liqueur.excute_delegation(self.__kbar_delegation, kbar)
+        self.__excute_delegation(self.__kbar_delegation, kbar)
 
     def OnNotifyBest5(self, sMarketNo, sStockidx, nBestBid1, nBestBidQty1, nBestBid2, nBestBidQty2, nBestBid3,
                       nBestBidQty3, nBestBid4, nBestBidQty4, nBestBid5, nBestBidQty5, nExtendBid, nExtendBidQty,
@@ -454,7 +476,7 @@ class Liqueur:
                   PriceQty(nBestAsk5, nBestAskQty5)]
 
         best_five = BestFivePrice.from_best_five(bid_py, ask_py)
-        Liqueur.excute_delegation(self.__best_five_delegation, best_five)
+        self.__excute_delegation(self.__best_five_delegation, best_five)
 
     # Public function
     def run(self):
@@ -689,26 +711,3 @@ class Liqueur:
             None
         '''
         self.__add_hook_callback(self.__best_five_delegation, f, 0)
-
-    @staticmethod
-    def excute_delegation(delegation, *argv):
-        ''' Excutes the delegation group functions.
-
-        Args:
-            (dictionary)delegation: The delegation group object.
-
-        Returns:
-            None
-
-        Raises:
-            TypeError: The delegation in invalid type.
-        '''
-        if not isinstance(delegation, dict):
-            raise TypeError('The delegation group must be dictionary object')
-
-        if len(delegation) == 0:
-            return
-
-        for rule, func in sorted(delegation.items(), key=lambda d: d[0]):
-            if func is not None:
-                func(*argv)
