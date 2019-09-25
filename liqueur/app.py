@@ -490,6 +490,20 @@ class Liqueur:
         if self.__is_login:
             self.__quote.leave_monitor()
 
+    def terminate(self):
+        ''' Terminate the application.
+
+        Args:
+            None
+
+        Returns:
+            None
+
+        Raises:
+            None
+        '''
+        self.__alive = False
+
     def hook_time(self, rule=0):
         ''' Decorator which hooks the time callback function.
 
