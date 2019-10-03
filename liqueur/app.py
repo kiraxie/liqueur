@@ -52,7 +52,7 @@ class SubscriptionMgr:
                     self.__quote.append(q)
 
             if len(subscription_conf['detail']) > 0:
-                for d in subscription_conf['tick']:
+                for d in subscription_conf['detail']:
                     self.__detail.append(d)
 
             if len(subscription_conf['tick']) > 0:
@@ -489,7 +489,7 @@ class Liqueur:
                       nBestAsk1, nBestAskQty1, nBestAsk2, nBestAskQty2, nBestAsk3, nBestAskQty3, nBestAsk4,
                       nBestAskQty4, nBestAsk5, nBestAskQty5, nExtendAsk, nExtendAskQty, nSimulate):
         ''' Detail in offical document 4-4-e'''
-        (p_stock, ret) = self.__quote.get_stock_by_index(sMarketNo, sIndex)
+        (p_stock, ret) = self.__quote.get_stock_by_index(sMarketNo, sStockidx)
         if self.__message('', ret_code=ret):
             return
 
