@@ -3,7 +3,6 @@ import signal
 import math
 from datetime import datetime
 
-from .dll import new_stock_quote
 from .center import Center
 from .quote import Quote
 from .reply import Reply
