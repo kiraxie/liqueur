@@ -104,6 +104,7 @@ class Liqueur:
 
     __config = {}
     __is_login = False
+    __connected = False
     __alive = True
 
     # Public variable
@@ -387,7 +388,8 @@ class Liqueur:
         ''' Detail in offical document 4-4-g'''
         dt = datetime.combine(datetime.now(), datetime.strptime(
             (('%d:%d:%d') % (sHour, sMinute, sSecond)), '%H:%M:%S').time())
-        self.__excute_delegation(self.__time_delegation, dt)
+        if self.__connected:
+            self.__excute_delegation(self.__time_delegation, dt)
 
     def OnConnection(self, nKind, nCode):
         ''' Detail in offical document 4-4-a'''
@@ -401,6 +403,7 @@ class Liqueur:
             self.__alive = False
         elif nKind == return_codes.subject_connection_stocks_ready:
             self.__message(message='...success')
+            self.__connected = True
             self.__send_heartbeat()
             self.__subscription()
         elif nKind == return_codes.subject_connection_fail:
