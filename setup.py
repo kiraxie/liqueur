@@ -25,7 +25,8 @@ setup(
     zip_safe=False,
     install_requires=[
         'comtypes >= 1.1.7; platform_system=="Windows"',
-        'pywin32 >= 1.0; platform_system=="Windows"'
+        'pywin32 >= 1.0; platform_system=="Windows"',
+        'skcom >= 0.9.3'
     ],
     include_package_data=True,
     platforms=[
