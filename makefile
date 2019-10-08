@@ -49,4 +49,19 @@ clean:
 	@rm -rf $(BUILD_DIR) $(DIST_DIR) $(PKGINFO_DIR)
 	@rm -f $(VERSION_FILE) $(PACKAGE_FILE) $(TEST_FILE)
 
-.PHONY: version package test publish clean
+changelog: $(VERSION_FILE)
+	@cp $(CHANGELOG_FILE) $(CHANGELOG_FILE).org
+	@echo -e '# Changelog\n' > $(CHANGELOG_FILE)
+	@echo -e '## '`cat $(VERSION_FILE)`'\n' >> $(CHANGELOG_FILE)
+	@echo -e '### Feature {#feat_'`cat $(VERSION_FILE) | sed 's/\./_/g'`}'\n' >> \
+		$(CHANGELOG_FILE)
+	@git log origin/master..HEAD --no-merges --pretty=format:'* %s' | grep 'feat' >> \
+		$(CHANGELOG_FILE)
+	@echo -e '\n### Bug fixes {#fix_'`cat $(VERSION_FILE) | sed 's/\./_/g'`}'\n' >> \
+		$(CHANGELOG_FILE)
+	@git log origin/master..HEAD --no-merges --pretty=format:'* %s' | grep 'fix' >> \
+		$(CHANGELOG_FILE)
+	@sed -e '1d' $(CHANGELOG_FILE).org >> $(CHANGELOG_FILE)
+	@rm $(CHANGELOG_FILE).org
+
+.PHONY: version package test publish clean changelog
