@@ -3,7 +3,6 @@ import signal
 import math
 from datetime import datetime
 
-from .dll import new_stock_quote
 from .center import Center
 from .quote import Quote
 from .reply import Reply
@@ -16,6 +15,7 @@ class SubscriptionMgr:
     __detail = []
     __tick = []
     __kbar = []
+    __stocks_of_market = []
 
     @property
     def quote(self):
@@ -40,6 +40,10 @@ class SubscriptionMgr:
     def kbar(self):
         return self.__kbar
 
+    @property
+    def stocks_of_market(self):
+        return self.__stocks_of_market
+
     def __init__(self, subscription_conf=None):
         if subscription_conf is not None:
             if len(subscription_conf['quote']) > 0:
@@ -47,7 +51,7 @@ class SubscriptionMgr:
                     self.__quote.append(q)
 
             if len(subscription_conf['detail']) > 0:
-                for d in subscription_conf['tick']:
+                for d in subscription_conf['detail']:
                     self.__detail.append(d)
 
             if len(subscription_conf['tick']) > 0:
@@ -57,6 +61,10 @@ class SubscriptionMgr:
             if len(subscription_conf['kbar']) > 0:
                 for (orderbook_id, k_type) in subscription_conf['kbar']:
                     self.__kbar.append((str(orderbook_id), k_type))
+
+            if len(subscription_conf['stocks_of_market']) > 0:
+                for market in subscription_conf['stocks_of_market']:
+                    self.__stocks_of_market.append(int(market))
 
     def append_stock_quote(self, orderbook_id):
         self.__quote.append(str(orderbook_id))
@@ -82,6 +90,9 @@ class SubscriptionMgr:
     def append_kbar(self, orderbook_id, kbar_type):
         self.__kbar.append((str(orderbook_id), kbar_type))
 
+    def append_stocks_of_market(self, market):
+        self.__stocks_of_market.append(int(market))
+
 
 class Liqueur:
     # Private variable
@@ -93,6 +104,7 @@ class Liqueur:
 
     __config = {}
     __is_login = False
+    __connected = False
     __alive = True
 
     # Public variable
@@ -102,6 +114,12 @@ class Liqueur:
     __tick_delegation = {}
     __kbar_delegation = {}
     __best_five_delegation = {}
+    __stocks_of_market_delegation = {}
+
+    # Property
+    @property
+    def config(self):
+        return self.__config
 
     # Private function
     def __message(self, message='', ret_code=-1, end='\n'):
@@ -125,7 +143,7 @@ class Liqueur:
             err_ret = True
 
         if message != '' and ret_code == -1:
-            Liqueur.excute_delegation(self.__message_delegation, message + end)
+            self.__excute_delegation(self.__message_delegation, message + end)
 
         return err_ret
 
@@ -242,26 +260,31 @@ class Liqueur:
         Raises:
             None
         '''
-        for page_string in self.__subscription_mgr.quote:
+        for page_string in self.subscription_mgr.quote:
             (page, ret) = self.__quote.request_stocks(-1, page_string)
             if self.__message('Quote subscription: ', ret_code=ret):
                 return
 
-        if len(self.__subscription_mgr.detail) > 0:
-            for orderbook_id in self.__subscription_mgr.detail:
+        if len(self.subscription_mgr.detail) > 0:
+            for orderbook_id in self.subscription_mgr.detail:
                 (page, ret) = self.__quote.request_ticks(-1, orderbook_id)
                 if self.__message('Quote detail subscription: ', ret_code=ret):
                     return
         else:
-            for orderbook_id in self.__subscription_mgr.tick:
+            for orderbook_id in self.subscription_mgr.tick:
                 (page, ret) = self.__quote.request_live_tick(-1, orderbook_id)
                 if self.__message('Quote tick subscription: ', ret_code=ret):
                     return
 
-        for (orderbook_id, kbar_type) in self.__subscription_mgr.kbar:
+        for (orderbook_id, kbar_type) in self.subscription_mgr.kbar:
             ret = self.__quote.request_k_line_am(orderbook_id,
                                                  kbar_type, kbar_out_type.new, kbar_trade_session.daylight)
             if self.__message('Quote K bar subscription: ', ret_code=ret):
+                return
+
+        for market in self.subscription_mgr.stocks_of_market:
+            ret = self.__quote.request_stock_list(market)
+            if self.__message('Stock list subscription: ', ret_code=ret):
                 return
 
     def __add_hook_callback(self, delegation_map, func, rule):
@@ -294,6 +317,28 @@ class Liqueur:
 
         delegation_map[rule] = func
 
+    def __excute_delegation(self, delegation, *argv):
+        ''' Excutes the delegation group functions.
+
+        Args:
+            (dictionary)delegation: The delegation group object.
+
+        Returns:
+            None
+
+        Raises:
+            TypeError: The delegation in invalid type.
+        '''
+        if not isinstance(delegation, dict):
+            raise TypeError('The delegation group must be dictionary object.')
+
+        if len(delegation) == 0:
+            return
+
+        for rule, func in sorted(delegation.items(), key=lambda d: d[0]):
+            if func is not None:
+                func(*argv)
+
     def __init__(self, conf):
         ''' Liqueur application constructor
 
@@ -312,10 +357,10 @@ class Liqueur:
 
         self.__config = conf
         if 'subscription' in self.__config:
-            self.__subscription_mgr = SubscriptionMgr(
+            self.subscription_mgr = SubscriptionMgr(
                 self.__config['subscription'])
         else:
-            self.__subscription_mgr = SubscriptionMgr()
+            self.subscription_mgr = SubscriptionMgr()
         self.__time_delegation[-1] = self.__send_heartbeat
 
     def __del__(self):
@@ -343,7 +388,8 @@ class Liqueur:
         ''' Detail in offical document 4-4-g'''
         dt = datetime.combine(datetime.now(), datetime.strptime(
             (('%d:%d:%d') % (sHour, sMinute, sSecond)), '%H:%M:%S').time())
-        Liqueur.excute_delegation(self.__time_delegation, dt)
+        if self.__connected:
+            self.__excute_delegation(self.__time_delegation, dt)
 
     def OnConnection(self, nKind, nCode):
         ''' Detail in offical document 4-4-a'''
@@ -357,6 +403,7 @@ class Liqueur:
             self.__alive = False
         elif nKind == return_codes.subject_connection_stocks_ready:
             self.__message(message='...success')
+            self.__connected = True
             self.__send_heartbeat()
             self.__subscription()
         elif nKind == return_codes.subject_connection_fail:
@@ -396,7 +443,7 @@ class Liqueur:
                                            bid_price, bid_qty, ask_price, ask_qty, buy_qty, sell_qty, tick_qty,
                                            total_qty, ref_qty, ref_price, up_price, down_price, simulate)
 
-        Liqueur.excute_delegation(self.__quote_delegation, stock_quote)
+        self.__excute_delegation(self.__quote_delegation, stock_quote)
 
     def OnNotifyTicks(self, sMarketNo, sIndex, nPtr, nDate, nTimehms, nTimemillismicros, nBid, nAsk, nClose, nQty,
                       nSimulate):
@@ -414,7 +461,7 @@ class Liqueur:
 
         tick = Tick.from_tick(nDate, nTimehms, nTimemillismicros,
                               orderbook_id, name, bid, ask, close, nQty, nSimulate)
-        Liqueur.excute_delegation(self.__tick_delegation, tick)
+        self.__excute_delegation(self.__tick_delegation, tick)
 
     def OnNotifyHistoryTicks(self, sMarketNo, sIndex, nPtr, nDate, nTimehms, nTimemillismicros, nBid, nAsk, nClose,
                              nQty, nSimulate):
@@ -432,29 +479,43 @@ class Liqueur:
 
         tick = Tick.from_tick(nDate, nTimehms, nTimemillismicros,
                               orderbook_id, name, bid, ask, close, nQty, nSimulate)
-        Liqueur.excute_delegation(self.__tick_delegation, tick)
+        self.__excute_delegation(self.__tick_delegation, tick)
 
     def OnNotifyKLineData(self, bstrStockNo, bstrData):
         ''' Detail in offical document 4-4-f'''
-        kbar = KBar.from_kbar_string(bstrData)
-        Liqueur.excute_delegation(self.__kbar_delegation, kbar)
+        kbar = KBar.from_kbar_string(bstrStockNo, bstrData)
+        self.__excute_delegation(self.__kbar_delegation, kbar)
 
     def OnNotifyBest5(self, sMarketNo, sStockidx, nBestBid1, nBestBidQty1, nBestBid2, nBestBidQty2, nBestBid3,
                       nBestBidQty3, nBestBid4, nBestBidQty4, nBestBid5, nBestBidQty5, nExtendBid, nExtendBidQty,
                       nBestAsk1, nBestAskQty1, nBestAsk2, nBestAskQty2, nBestAsk3, nBestAskQty3, nBestAsk4,
                       nBestAskQty4, nBestAsk5, nBestAskQty5, nExtendAsk, nExtendAskQty, nSimulate):
         ''' Detail in offical document 4-4-e'''
+        (p_stock, ret) = self.__quote.get_stock_by_index(sMarketNo, sStockidx)
+        if self.__message('', ret_code=ret):
+            return
+
+        orderbook_id = p_stock.bstrStockNo
+        cardinal_num = math.pow(10, p_stock.sDecimal)
+
         bid_py = [PriceQty(nBestBid1, nBestBidQty1), PriceQty(nBestBid2, nBestBidQty2),
-                  PriceQty(nBestBid3, nBestBidQty3), PriceQty(
-                      nBestBid4, nBestBidQty4),
+                  PriceQty(nBestBid3, nBestBidQty3), PriceQty(nBestBid4, nBestBidQty4),
                   PriceQty(nBestBid5, nBestBidQty5)]
         ask_py = [PriceQty(nBestAsk1, nBestAskQty1), PriceQty(nBestAsk2, nBestAskQty2),
-                  PriceQty(nBestAsk3, nBestAskQty3), PriceQty(
-                      nBestAsk4, nBestAskQty4),
+                  PriceQty(nBestAsk3, nBestAskQty3), PriceQty(nBestAsk4, nBestAskQty4),
                   PriceQty(nBestAsk5, nBestAskQty5)]
 
-        best_five = BestFivePrice.from_best_five(bid_py, ask_py)
-        Liqueur.excute_delegation(self.__best_five_delegation, best_five)
+        best_five = BestFivePrice.from_best_five(orderbook_id, bid_py, ask_py)
+        self.__excute_delegation(self.__best_five_delegation, best_five)
+
+    def OnNotifyStockList(self, sMarketNo, bstrStockData):
+        stock_list = []
+        for stock_category in bstrStockData.split('\n'):
+            for stock_info in stock_category.split(';'):
+                s = stock_info.split(',')
+                stock_list.append(s[0])
+
+        self.__excute_delegation(self.__stocks_of_market_delegation, sMarketNo, stock_list)
 
     # Public function
     def run(self):
@@ -490,6 +551,20 @@ class Liqueur:
         if self.__is_login:
             self.__quote.leave_monitor()
 
+    def terminate(self):
+        ''' Terminate the application.
+
+        Args:
+            None
+
+        Returns:
+            None
+
+        Raises:
+            None
+        '''
+        self.__alive = False
+
     def hook_time(self, rule=0):
         ''' Decorator which hooks the time callback function.
 
@@ -512,7 +587,7 @@ class Liqueur:
         return decorator
 
     def append_time_delegate(self, f):
-        ''' function way to hook the time callback function.
+        ''' Function way to hook the time callback function.
 
         These functions will be excuted when time event was triggered.
 
@@ -550,7 +625,7 @@ class Liqueur:
         return decorator
 
     def append_message_delegate(self, f):
-        ''' function way to hook the message callback function.
+        ''' Function way to hook the message callback function.
 
         By default, the application DOES NOT print or log any message,
         so the developer can choose what it does when message pops out.
@@ -581,7 +656,7 @@ class Liqueur:
         return decorator
 
     def append_quote_delegate(self, f):
-        ''' function way to hook the quote callback function.
+        ''' Function way to hook the quote callback function.
 
         Args:
             (function point)func: Function pointer
@@ -608,7 +683,7 @@ class Liqueur:
         return decorator
 
     def append_tick_delegate(self, f):
-        ''' function way to hook the tick callback function.
+        ''' Function way to hook the tick callback function.
 
         Args:
             (function point)func: Function pointer
@@ -635,7 +710,7 @@ class Liqueur:
         return decorator
 
     def append_kbar_delegate(self, f):
-        ''' function way to hook the K bar callback function.
+        ''' Function way to hook the K bar callback function.
 
         Args:
             (function point)func: Function pointer
@@ -663,7 +738,7 @@ class Liqueur:
         return decorator
 
     def append_best_five_delegate(self, f):
-        ''' function way to hook the best five prices callback function.
+        ''' Function way to hook the best five prices callback function.
 
         Args:
             (function point)func: Function pointer
@@ -676,25 +751,44 @@ class Liqueur:
         '''
         self.__add_hook_callback(self.__best_five_delegation, f, 0)
 
-    @staticmethod
-    def excute_delegation(delegation, *argv):
-        ''' Excutes the delegation group functions.
-
-        Args:
-            (dictionary)delegation: The delegation group object.
+    def hook_stocks_of_market(self, rule=0):
+        ''' Decorator which hooks the stock of market callback function.
 
         Returns:
             None
 
         Raises:
-            TypeError: The delegation in invalid type.
+            None
         '''
-        if not isinstance(delegation, dict):
-            raise TypeError('The delegation group must be dictionary object')
+        def decorator(f):
+            self.__add_hook_callback(self.__stocks_of_market_delegation, f, rule)
+            return f
+        return decorator
 
-        if len(delegation) == 0:
-            return
+    def append_stocks_of_market_delegate(self, f):
+        ''' Function way to hook the stock of market callback function.
 
-        for rule, func in sorted(delegation.items(), key=lambda d: d[0]):
-            if func is not None:
-                func(*argv)
+        Args:
+            (function point)func: Function pointer
+
+        Returns:
+            None
+
+        Raises:
+            None
+        '''
+        self.__add_hook_callback(self.__stocks_of_market_delegation, f, 0)
+
+    def message(self, message_str):
+        ''' External message interface.
+
+        Args:
+            [string]message: Message that you want to send.
+
+        Returns:
+            None
+
+        Raises:
+            None
+        '''
+        self.__message(message=message_str)

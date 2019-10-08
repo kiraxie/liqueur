@@ -3,15 +3,25 @@ import json
 
 
 class _struct:
+    __orderbook_id = ''
     __datetime = None
+
+    @property
+    def orderbook_id(self):
+        return self.__orderbook_id
 
     @property
     def datetime(self):
         return self.__datetime
 
-    def __init__(self, dt):
+    @property
+    def timestamp(self):
+        return self.__datetime.timestamp()
+
+    def __init__(self, orderbook_id, dt):
         assert(type(dt) != 'datetime')
 
+        self.__orderbook_id = orderbook_id
         self.__datetime = dt
 
     def __gt__(self, other):
@@ -50,7 +60,6 @@ class _struct:
 
 
 class Tick(_struct):
-    __orderbook_id = ''
     __name = ''
 
     __bid = -1
@@ -58,10 +67,6 @@ class Tick(_struct):
     __close = -1
     __qty = -1
     __simulate = True
-
-    @property
-    def orderbook_id(self):
-        return self.__orderbook_id
 
     @property
     def name(self):
@@ -88,9 +93,8 @@ class Tick(_struct):
         return self.__simulate
 
     def __init__(self, dt, orderbook_id, name, bid, ask, close, qty, simulate):
-        super(Tick, self).__init__(dt)
+        super(Tick, self).__init__(orderbook_id, dt)
 
-        self.__orderbook_id = orderbook_id
         self.__name = name
         self.__bid = bid
         self.__ask = ask
@@ -100,8 +104,8 @@ class Tick(_struct):
 
     def to_dict(self):
         return {'datetime': str(self.datetime),
-                'timestamp': self.datetime.timestamp(),
-                'orderbook_id': self.__orderbook_id,
+                'timestamp': self.timestamp,
+                'orderbook_id': self.orderbook_id,
                 'name': self.__name,
                 'bid': self.__bid,
                 'ask': self.__ask,
@@ -111,7 +115,7 @@ class Tick(_struct):
 
     @classmethod
     def from_dict(cls, dict_data):
-        dt = datetime.timestamp(dict_data['timestamp'])
+        dt = datetime.fromtimestamp(dict_data['timestamp'])
 
         return cls(dt,
                    dict_data['orderbook_id'],
@@ -140,7 +144,6 @@ class Tick(_struct):
 
 
 class QuoteData(_struct):
-    __orderbook_id = ''
     __name = ''
 
     __high_price = -1
@@ -165,10 +168,6 @@ class QuoteData(_struct):
     __down_price = -1
 
     __simulate = True
-
-    @property
-    def orderbook_id(self):
-        return self.__orderbook_id
 
     @property
     def name(self):
@@ -223,12 +222,12 @@ class QuoteData(_struct):
         return self.__total_qty
 
     @property
-    def ref_qty(self):
-        return self.__ref_qty
-
-    @property
     def ref_price(self):
         return self.__ref_price
+
+    @property
+    def ref_qty(self):
+        return self.__ref_qty
 
     @property
     def up_price(self):
@@ -242,34 +241,10 @@ class QuoteData(_struct):
     def simulate(self):
         return self.__simulate
 
-    def to_dict(self):
-        return {'datetime': str(self.datetime),
-                'timestamp': self.datetime.timestamp(),
-                'orderbook_id': self.__orderbook_id,
-                'name': self.__name,
-                'high_price': self.__high_price,
-                'open_price': self.__open_price,
-                'low_price': self.__low_price,
-                'close_price': self.__close_price,
-                'bid_price': self.__bid_price,
-                'bid_qty': self.__bid_qty,
-                'ask_price': self.__ask_price,
-                'ask_qty': self.__ask_qty,
-                'buy_qty': self.__buy_qty,
-                'sell_qty': self.__sell_qty,
-                'tick_qty': self.__tick_qty,
-                'total_qty': self.__total_qty,
-                'ref_qty': self.__ref_qty,
-                'ref_price': self.__ref_price,
-                'up_price': self.__up_price,
-                'down_price': self.__down_price,
-                'simulate': self.__simulate}
-
     def __init__(self, dt, *args, **kwargs):
 
-        super(QuoteData, self).__init__(dt)
+        super(QuoteData, self).__init__(kwargs['orderbook_id'], dt)
 
-        self.__orderbook_id = kwargs['orderbook_id']
         self.__name = kwargs['name']
 
         self.__high_price = kwargs['high_price']
@@ -295,9 +270,32 @@ class QuoteData(_struct):
 
         self.__simulate = kwargs['simulate']
 
+    def to_dict(self):
+        return {'datetime': str(self.datetime),
+                'timestamp': self.timestamp,
+                'orderbook_id': self.orderbook_id,
+                'name': self.__name,
+                'high_price': self.__high_price,
+                'open_price': self.__open_price,
+                'low_price': self.__low_price,
+                'close_price': self.__close_price,
+                'bid_price': self.__bid_price,
+                'bid_qty': self.__bid_qty,
+                'ask_price': self.__ask_price,
+                'ask_qty': self.__ask_qty,
+                'buy_qty': self.__buy_qty,
+                'sell_qty': self.__sell_qty,
+                'tick_qty': self.__tick_qty,
+                'total_qty': self.__total_qty,
+                'ref_qty': self.__ref_qty,
+                'ref_price': self.__ref_price,
+                'up_price': self.__up_price,
+                'down_price': self.__down_price,
+                'simulate': self.__simulate}
+
     @classmethod
     def from_dict(cls, dict_data):
-        dt = datetime.timestamp(dict_data['timestamp'])
+        dt = datetime.fromtimestamp(dict_data['timestamp'])
 
         return cls(dt, **dict_data)
 
@@ -431,8 +429,8 @@ class KBar(_struct):
             self.__head = self.__open_price
             self.__foot = self.__close_price
 
-    def __init__(self, dt, open_price, high_price, low_price, close_price, qty):
-        super(KBar, self).__init__(dt)
+    def __init__(self, orderbook_id, dt, open_price, high_price, low_price, close_price, qty):
+        super(KBar, self).__init__(orderbook_id, dt)
 
         self.__open_price = float(open_price)
         self.__high_price = float(high_price)
@@ -455,25 +453,6 @@ class KBar(_struct):
 
         return True
 
-    # Check K bar touch
-    def __eq__(self, other):
-        if self.__head < other.__foot:
-            return False
-
-        if self.__foot > other.__head:
-            return False
-
-        return True
-
-    def __ne__(self, other):
-        if self.__head < other.__foot:
-            return True
-
-        if self.__foot > other.__head:
-            return True
-
-        return False
-
     # Compute other lind of K line
     def __iadd__(self, other):
         self.__timestamp = other.__timestamp
@@ -486,8 +465,9 @@ class KBar(_struct):
 
     def to_dict(self, detail=False):
         d = {}
-        b = {'datetime': str(self.datetime),
-             'timestamp': self.datetime.timestamp(),
+        b = {'orderbook_id': str(self.orderbook_id),
+             'datetime': str(self.datetime),
+             'timestamp': self.timestamp,
              'open_price': self.__open_price,
              'high_price': self.__high_price,
              'low_price': self.__low_price,
@@ -506,9 +486,10 @@ class KBar(_struct):
 
     @classmethod
     def from_dict(cls, dict_data):
-        dt = datetime.timestamp(dict_data['timestamp'])
+        dt = datetime.fromtimestamp(dict_data['timestamp'])
 
-        return cls(dt,
+        return cls(dict_data['orderbook_id'],
+                   dt,
                    dict_data['open_price'],
                    dict_data['high_price'],
                    dict_data['low_price'],
@@ -516,24 +497,23 @@ class KBar(_struct):
                    dict_data['qty'])
 
     @classmethod
-    def from_kbar(cls, time_string, open_price, high_price, low_price, close_price, qty):
+    def from_kbar(cls, orderbook_id, time_string, open_price, high_price, low_price, close_price, qty):
         if len(time_string) > 10:
             dt = datetime.strptime(time_string, '%Y/%m/%d %H:%M')
         else:
             dt = datetime.strptime(time_string, '%Y/%m/%d')
 
-        return cls(dt, open_price, high_price, low_price, close_price, qty)
+        return cls(orderbook_id, dt, open_price, high_price, low_price, close_price, qty)
 
     @classmethod
-    def from_kbar_string(cls, string_data):
-
+    def from_kbar_string(cls, orderbook_id, string_data):
         [time_string, open_price, high_price, low_price, close_price, qty] = string_data.split(',')
         if len(time_string) > 10:
             dt = datetime.strptime(time_string, '%Y/%m/%d %H:%M')
         else:
             dt = datetime.strptime(time_string, '%Y/%m/%d')
 
-        return cls(dt, open_price, high_price, low_price, close_price, qty)
+        return cls(orderbook_id, dt, open_price, high_price, low_price, close_price, qty)
 
 
 class PriceQty():
@@ -572,8 +552,8 @@ class BestFivePrice(_struct):
     def ask(self):
         return self.__ask
 
-    def __init__(self, dt, bid_py, ask_py):
-        super(BestFivePrice, self).__init__(dt)
+    def __init__(self, orderbook_id, dt, bid_py, ask_py):
+        super(BestFivePrice, self).__init__(orderbook_id, dt)
 
         self.update(bid_py, ask_py)
 
@@ -586,8 +566,9 @@ class BestFivePrice(_struct):
             self.__ask[i] = ask_py[i]
 
     def to_dict(self):
-        d = {'datetime': str(self.datetime),
-             'timestamp': self.datetime.timestamp(),
+        d = {'orderbook_id': str(self.orderbook_id),
+             'datetime': str(self.datetime),
+             'timestamp': self.timestamp,
              'bid': [],
              'ask': []}
 
@@ -599,7 +580,7 @@ class BestFivePrice(_struct):
 
     @classmethod
     def from_dict(cls, dict_data):
-        dt = datetime.timestamp(dict_data['timestamp'])
+        dt = datetime.fromtimestamp(dict_data['timestamp'])
         bid_py = []
         ask_py = []
 
@@ -607,8 +588,8 @@ class BestFivePrice(_struct):
             bid_py.append(PriceQty.from_dict(dict_data['bid'][i]))
             ask_py.append(PriceQty.from_dict(dict_data['ask'][i]))
 
-        return cls(dt, bid_py, ask_py)
+        return cls(dict_data['orderbook_id'], dt, bid_py, ask_py)
 
     @classmethod
-    def from_best_five(cls, bid_py, ask_py):
-        return cls(datetime.now(), bid_py, ask_py)
+    def from_best_five(cls, orderbook_id, bid_py, ask_py):
+        return cls(orderbook_id, datetime.now(), bid_py, ask_py)

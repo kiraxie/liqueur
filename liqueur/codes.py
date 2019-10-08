@@ -130,7 +130,7 @@ _market_no = {
     1: 'listed_at_over_the_counter',
     2: 'feature',
     3: 'option',
-    0: 'listed_at_emerging'
+    4: 'listed_at_emerging'
 }
 
 _kbar_type = {

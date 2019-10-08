@@ -4,23 +4,19 @@ Liqueur is a lightweight trade framework for Taiwan stock market based on Taiwan
 
 ## Requirement
 
----
-
 [Capital API v2.13.18](https://www.capital.com.tw/Service2/download/api_zip/CapitalAPI_2.13.18.zip)
 
-## Install
+## Installation
 
----
+Install the framework with pip:
 
-```
+```bash
 pip install Liqueur
 ```
 
 ## Quick Start
 
----
-
-```
+```python
 from liqueur import Liqueur, Config
 
 conf = Config('.')
@@ -52,7 +48,7 @@ if __name__ == "__main__":
     app.run()
 ```
 
-```
+```bash
 $ python myapp.py
 Login......ok
 Connect......success
