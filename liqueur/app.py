@@ -414,9 +414,12 @@ class Liqueur:
         Raises:
             None
         '''
-        del self.__center
-        del self.__quote
-        del self.__reply
+        if self.__center is not None:
+            del self.__center
+        if self.__quote is not None:
+            del self.__quote
+        if self.__reply is not None:
+            del self.__reply
 
     # Event callback
     def OnReplyMessage(self, bstrUserID, bstrMessage, sConfirmCode=0xFFFF):
