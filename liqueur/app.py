@@ -44,27 +44,66 @@ class SubscriptionMgr:
     def stocks_of_market(self):
         return self.__stocks_of_market
 
+    def __load_quote(self, quote_conf):
+        if len(quote_conf) > 0:
+            for q in quote_conf:
+                self.__quote.append(str(q))
+
+    def __load_detail(self, detail_conf):
+        if len(detail_conf) > 0:
+            for d in detail_conf:
+                self.__detail.append(str(d))
+
+    def __load_tick(self, tick_conf):
+        if len(tick_conf) > 0:
+            for t in tick_conf:
+                self.__tick.append(str(t))
+
+    def __load_kbar(self, kbar_conf):
+        if len(kbar_conf) > 0:
+            for (orderbook_id, k_type) in kbar_conf:
+                self.__kbar.append((str(orderbook_id), k_type))
+
+    def __load_stocks_of_market(self, stocks_of_market_conf):
+        if len(stocks_of_market_conf) > 0:
+            for market in stocks_of_market_conf:
+                self.__stocks_of_market.append(int(market))
+
     def __init__(self, subscription_conf=None):
         if subscription_conf is not None:
-            if len(subscription_conf['quote']) > 0:
-                for q in subscription_conf['quote']:
-                    self.__quote.append(q)
+            self.load(subscription_conf)
 
-            if len(subscription_conf['detail']) > 0:
-                for d in subscription_conf['detail']:
-                    self.__detail.append(d)
+    def load(self, subscription_conf):
+        if 'quote' in subscription_conf:
+            self.__load_quote(subscription_conf['quote'])
 
-            if len(subscription_conf['tick']) > 0:
-                for t in subscription_conf['tick']:
-                    self.__tick.append(t)
+        if 'detail' in subscription_conf:
+            self.__load_detail(subscription_conf['detail'])
 
-            if len(subscription_conf['kbar']) > 0:
-                for (orderbook_id, k_type) in subscription_conf['kbar']:
-                    self.__kbar.append((str(orderbook_id), k_type))
+        if 'tick' in subscription_conf:
+            self.__load_tick(subscription_conf['tick'])
 
-            if len(subscription_conf['stocks_of_market']) > 0:
-                for market in subscription_conf['stocks_of_market']:
-                    self.__stocks_of_market.append(int(market))
+        if 'kbar' in subscription_conf:
+            self.__load_kbar(subscription_conf['kbar'])
+
+        if 'stocks_of_market' in subscription_conf:
+            self.__load_stocks_of_market(subscription_conf['stocks_of_market'])
+
+    def clear(self, item=None):
+        if item is None:
+            self.__quote = []
+            self.__detail = []
+            self.__tick = []
+            self.__kbar = []
+            self.__stocks_of_market = []
+        elif item == 'quote':
+            self.__quote = []
+        elif item == 'detail':
+            self.__detail = []
+        elif item == 'kbar':
+            self.__kbar = []
+        elif item == 'stock_of_market':
+            self.__stock_of_market = []
 
     def append_stock_quote(self, orderbook_id):
         self.__quote.append(str(orderbook_id))
