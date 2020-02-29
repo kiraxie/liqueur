@@ -831,3 +831,21 @@ class Liqueur:
             None
         '''
         self.__message(message=message_str)
+
+    def subscription(self, subscription_conf=None):
+        ''' Subscribe the stock information from market.
+
+        Args:
+            [dictionary]subscription_conf: The stock orderbood id dictionary.
+
+        Returns:
+            None
+
+        Raises:
+            None
+        '''
+        if subscription_conf is not None:
+            self.subscription_mgr.clear()
+            self.subscription_mgr.load(subscription_conf)
+
+        self.__subscription()
