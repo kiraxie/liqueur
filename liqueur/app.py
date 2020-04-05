@@ -2,6 +2,7 @@ import pythoncom
 import signal
 import math
 from datetime import datetime
+from time import sleep
 
 from .center import Center
 from .quote import Quote
@@ -139,14 +140,12 @@ class Liqueur:
     __quote = None
     __reply = None
 
-    subscription_mgr = None
-
     __config = {}
     __is_login = False
     __connected = False
     __alive = True
 
-    # Public variable
+    __terminate_delegation = {}
     __time_delegation = {}
     __message_delegation = {}
     __quote_delegation = {}
@@ -154,6 +153,9 @@ class Liqueur:
     __kbar_delegation = {}
     __best_five_delegation = {}
     __stocks_of_market_delegation = {}
+
+    # Public variable
+    subscription_mgr = None
 
     # Property
     @property
@@ -253,6 +255,7 @@ class Liqueur:
             None
         '''
         self.__quote.leave_monitor()
+        self.__is_login = False
         self.__alive = False
 
     def __send_heartbeat(self, dt=None):
@@ -442,7 +445,7 @@ class Liqueur:
             self.__message(message='Connect...', end='')
         elif nKind == return_codes.subject_connection_disconnect:
             self.__message(message='Disconnect!')
-            self.__alive = False
+            self.__connected = False
         elif nKind == return_codes.subject_connection_stocks_ready:
             self.__message(message='...success')
             self.__connected = True
@@ -525,6 +528,9 @@ class Liqueur:
 
     def OnNotifyKLineData(self, bstrStockNo, bstrData):
         ''' Detail in offical document 4-4-f'''
+        if bstrData[:len('1989/00/14')] == '1989/00/14':
+            return
+
         kbar = KBar.from_kbar_string(bstrStockNo, bstrData)
         self.__excute_delegation(self.__kbar_delegation, kbar)
 
@@ -593,6 +599,9 @@ class Liqueur:
         if self.__is_login:
             self.__quote.leave_monitor()
 
+        while self.__connected:
+            pythoncom.PumpWaitingMessages()
+
     def terminate(self):
         ''' Terminate the application.
 
@@ -605,7 +614,44 @@ class Liqueur:
         Raises:
             None
         '''
-        self.__alive = False
+        if self.__alive:
+            self.__alive = False
+            self.__excute_delegation(self.__terminate_delegation)
+
+    def hook_terminate(self, rule=0):
+        ''' Decorator which hooks the terminate callback function.
+
+        These functions will be excuted when terminate function was triggered.
+
+        Args:
+            (int)rule: The excuted order.
+
+        Returns:
+            None
+
+        Raises:
+            None
+        '''
+        def decorator(f):
+            self.__add_hook_callback(self.__terminate_delegation, f, rule)
+            return f
+        return decorator
+
+    def append_terminate_delegate(self, f):
+        ''' Function way to hook the terminate callback function.
+
+        These functions will be excuted when terminate function was triggered.
+
+        Args:
+            (function point)func: Function pointer
+
+        Returns:
+            None
+
+        Raises:
+            None
+        '''
+        self.__add_hook_callback(self.__terminate_delegation, f, 0)
 
     def hook_time(self, rule=0):
         ''' Decorator which hooks the time callback function.
