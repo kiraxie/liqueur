@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.0.3rc2
+
+### Feature {#feat_0_0_3rc2}
+
+* feat: add packages helper class for automatic installation
+* feat: subscription function
+
+### Bug fixes {#fix_0_0_3rc2}
+
+* fix: make sure the del operator work well
+* fix: enhance the subscription manager class
+
 ## 0.0.2
 
 ### Feature {#feat_0_0_2}
