@@ -13,14 +13,16 @@ $(VERSION_FILE):
 	@cat $(SRC_DIR)/__init__.py | grep "__version__" | \
 		sed 's/"//g' | awk -F " = " '{print $$2}' > $(VERSION_FILE)
 
+# Print the current version
 version: $(VERSION_FILE)
+	@echo `cat $(VERSION_FILE)`
 
-gen_package: $(VERSION_FILE)
-	@python setup.py sdist
-	@python setup.py bdist_wheel
+# Produce the files which prepare to upload/release
+gen_package: $(VERSION_FILE) $(VERSION_FILE)
+	@py setup.py sdist
+	@py setup.py bdist_wheel
 
-$(PACKAGE_FILE):
-	@make gen_package
+$(PACKAGE_FILE): gen_package
 	@touch $(PACKAGE_FILE)
 
 package: $(VERSION_FILE) $(PACKAGE_FILE)
@@ -30,26 +32,28 @@ upload_testpypi: $(PACKAGE_FILE)
 		$(DIST_DIR)/liqueur-`cat $(VERSION_FILE)`-py3-none-any.whl \
 		$(DIST_DIR)/liqueur-`cat $(VERSION_FILE)`.tar.gz
 
-test_install: upload_testpypi
-	@pip install -i https://test.pypi.org/simple/ liqueur
 
-$(TEST_FILE):
-	@make upload_testpypi
-	@make test_install
+$(TEST_FILE): upload_testpypi
+	@pip install -i https://test.pypi.org/simple/ liqueur
 	@touch $(TEST_FILE)
 
-test: $(TEST_FILE)
+#
+test_publish: $(TEST_FILE)
 
-publish: $(PACKAGE_FILE) test
+# Offical release
+publish: $(VERSION_FILE) $(PACKAGE_FILE) test_publish
 	@twine upload \
 		$(DIST_DIR)/liqueur-`cat $(VERSION_FILE)`-py3-none-any.whl \
 		$(DIST_DIR)/liqueur-`cat $(VERSION_FILE)`.tar.gz
 
+# Clean all files which generate by makefile
 clean:
 	@rm -rf $(BUILD_DIR) $(DIST_DIR) $(PKGINFO_DIR)
 	@rm -f $(VERSION_FILE) $(PACKAGE_FILE) $(TEST_FILE)
 
+# Change log generation
 changelog: $(VERSION_FILE)
+	@git checkout $(CHANGELOG_FILE)
 	@cp $(CHANGELOG_FILE) $(CHANGELOG_FILE).org
 	@echo -e '# Changelog\n' > $(CHANGELOG_FILE)
 	@echo -e '## '`cat $(VERSION_FILE)`'\n' >> $(CHANGELOG_FILE)
@@ -64,4 +68,8 @@ changelog: $(VERSION_FILE)
 	@sed -e '1d' $(CHANGELOG_FILE).org >> $(CHANGELOG_FILE)
 	@rm $(CHANGELOG_FILE).org
 
-.PHONY: version package test publish clean changelog
+# Install this library
+install:
+	@py setup.py install
+
+.PHONY: version test_publish publish clean changelog install
