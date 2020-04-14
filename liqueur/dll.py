@@ -11,8 +11,8 @@ def _api_initialization(cls):
         global _DLL_INIT_FLAG
 
         if not _DLL_INIT_FLAG:
-            vcredist = VcredistHelper(VCREDIST_VER_REQUIRED)
-            capital_api = CapitalAPIHelper(DLL_VER_REQUIRED)
+            vcredist = VcredistHelper(VCREDIST_VER_REQUIRED, '~/.liqueur')
+            capital_api = CapitalAPIHelper(DLL_VER_REQUIRED, '~/.liqueur')
 
             vcredist.auto_install()
             capital_api.auto_install()

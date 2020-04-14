@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.4
+
+### Bug fixes {#fix_0_0_4}
+
+* fix: lacks argments in auto install class
+
 ## 0.0.3
 
 ### Feature {#feat_0_0_3}

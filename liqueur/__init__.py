@@ -5,4 +5,4 @@ from .codes import return_codes, market_no, kbar_type, kbar_trade_session
 from .helper import VcredistHelper, CapitalAPIHelper
 from .dll import VCREDIST_VER_REQUIRED, DLL_VER_REQUIRED
 
-__version__ = "0.0.3"
+__version__ = "0.0.4"
