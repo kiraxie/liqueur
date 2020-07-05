@@ -1,0 +1,9 @@
+account:
+  username: "A123456789"
+  password: "xxxxxxxxxx"
+subscription:
+  detail: ['TX00']
+sqlalchemy:
+  queue_size: 1024
+  host: "splite://"
+  echo: true

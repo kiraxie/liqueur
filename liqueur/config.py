@@ -1,19 +1,25 @@
 import os
 import json
+import yaml
 
 
 class Config(dict):
-    def __init__(self, root_path, defaults=None):
+    def __init__(self, defaults=None):
         dict.__init__(self, defaults or {})
-        self.root_path = root_path
 
-    def from_json(self, filename):
-        filename = os.path.join(self.root_path, filename)
+    @classmethod
+    def from_json(cls, filename):
+        d = {}
+        with open(filename, 'r') as json_file:
+            d = json.loads(json_file.read())
+        return cls(d)
 
-        with open(filename) as json_file:
-            obj = json.loads(json_file.read())
-
-        return self.from_mapping(obj)
+    @classmethod
+    def from_yaml(cls, filename):
+        d = {}
+        with open(filename, 'r') as yaml_file:
+            d = yaml.load(yaml_file, Loader=yaml.Loader)
+        return cls(d)
 
     def from_mapping(self, *mapping, **kwargs):
         mappings = []

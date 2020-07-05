@@ -25,7 +25,12 @@ setup(
     zip_safe=False,
     install_requires=[
         'comtypes >= 1.1.7; platform_system=="Windows"',
-        'pywin32 >= 227; platform_system=="Windows"'
+        'pywin32 >= 227; platform_system=="Windows"',
+        'packaging >= 20.4; platform_system=="Windows"',
+        'wget >= 3.2; platform_system=="Windows"',
+        'requests >= 2.23.0; platform_system=="Windows"',
+        'sqlalchemy >= 1.3.17; platform_system=="Windows"',
+        'pyyaml >= 5.3.1; platform_system=="Windows"',
     ],
     include_package_data=True,
     platforms=[

@@ -3,8 +3,7 @@ from .dll import Component
 
 class Quote(Component):
     def __init__(self):
-        super(Quote, self).__init__()
-        self._component = self._Component__component_generator('quote')
+        super(Quote, self).__init__('quote')
 
     def enter_monitor(self):
         return self._component.SKQuoteLib_EnterMonitor()

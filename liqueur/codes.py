@@ -1,7 +1,7 @@
 from .util import LookupDict
 
 
-_return_codes = {
+_err_codes = {
     0: 'success',
     1000: 'error_login_first',
     1001: 'error_initialize_fail',
@@ -73,6 +73,18 @@ _return_codes = {
     1068: 'error_special_trade_type_is_marketprice_and_orderprice_should_be_zero',
     1069: 'error_market_type_invalid',
     1070: 'error_prohibit_oddlots_afterhours_continuous_trading',
+    1071: 'error_correct_price_only_lmt_range',
+    1072: 'error_sgx_dma_is_not_allow_correctprice_bybookno',
+    1073: 'error_sgx_api_order_seqno_error',
+    1074: 'error_query_agreement',
+    1075: 'error_all_agreement_signed',
+    1076: 'error_profitlossgwquery_date_invalid',
+    1077: 'error_profitlossgwquery_bookno_is_invalid',
+    1078: 'error_profitlossgwquery_seqno_is_invalid',
+    1079: 'error_login_without_password',
+    1080: 'error_login_without_loginid',
+    1081: 'error_login_without_setquote',
+    1082: 'error_there_is_no_oversea_future_account',
     2001: 'warning_of_com_data_missing',
     2002: 'warning_ts_ready',
     2003: 'warning_login_already',
@@ -81,8 +93,8 @@ _return_codes = {
     2006: 'warning_order_did_not_locked',
     2007: 'warning_oo_com_quotedata_missing',
     2008: 'warning_oo_com_orderdata_missing',
-    2009: 'warning_sign_ts_smarttrade_rick_noitice_first',
-    2010: 'warning_sign_ts_smarttrade_rick_noitice_first',
+    2009: 'warning_sign_ts_smarttrade_risk_noitice_first',
+    2010: 'warning_sign_tf_smarttrade_risk_noitice_first',
     2011: 'warning_no_function_in_continuous_trading',
     2012: 'warning_osquotecenter_is_not_exist',
     2013: 'warning_initialize_osquotecenter_connection_fail',
@@ -90,6 +102,8 @@ _return_codes = {
     2015: 'warning_download_of_com_data_is_timeout',
     2016: 'warning_download_oo_com_data_is_timeout',
     2017: 'warning_register_replylib_onreplymessage_first',
+    2018: 'warning_sign_stock_or_future_api_agreement_first',
+    2019: 'warning_sign_future_api_agreement_first',
     3001: 'subject_connection_connected',
     3002: 'subject_connection_disconnect',
     3003: 'subject_connection_stocks_ready',
@@ -115,14 +129,17 @@ _return_codes = {
     3024: 'subject_market_no_is_out_of_range',
     3025: 'subject_cant_accept_spread_stockno',
     3026: 'subject_connection_sgx_api_ready',
-    151: 'error_login_wrong_password',
-    152: 'error_login_wrong_password_over_limit',
-    153: 'error_login_wrong_id',
+    3027: 'subject_tick_limit_exceed',
+    3028: 'subject_quote_limit_exceed_in_one_page',
+    3029: 'subject_quote_string_exist_null',
+    3030: 'subject_no_quote_subscribe',
+    3031: 'subject_no_related_market_stocks',
     4001: 'kline_data_type_not_found',
     151: 'error_login_wrong_password',
     152: 'error_login_wrong_password_over_limit',
     153: 'error_login_wrong_id',
-    9999: 'fail'
+    155: 'error_change_password_in_first_time',
+    9999: 'fail',
 }
 
 _market_no = {
@@ -150,7 +167,7 @@ _kbar_trade_session = {
     1: 'daylight',
 }
 
-return_codes = LookupDict(name='return_codes')
+err_codes = LookupDict(name='err_codes')
 
 market_no = LookupDict(name='market_number')
 
@@ -162,8 +179,8 @@ kbar_trade_session = LookupDict(name='kbar_trade_session_type')
 
 
 def _init():
-    for k, v in _return_codes.items():
-        setattr(return_codes, v, k)
+    for k, v in _err_codes.items():
+        setattr(err_codes, v, k)
 
     for k, v in _market_no.items():
         setattr(market_no, v, k)

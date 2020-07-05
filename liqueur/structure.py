@@ -3,8 +3,13 @@ import json
 
 
 class _struct:
+    __type = ''
     __orderbook_id = ''
     __datetime = None
+
+    @property
+    def type(self):
+        return self.__type
 
     @property
     def orderbook_id(self):
@@ -18,9 +23,10 @@ class _struct:
     def timestamp(self):
         return self.__datetime.timestamp()
 
-    def __init__(self, orderbook_id, dt):
+    def __init__(self, t, orderbook_id, dt):
         assert(type(dt) != 'datetime')
 
+        self.__type = t
         self.__orderbook_id = orderbook_id
         self.__datetime = dt
 
@@ -93,7 +99,7 @@ class Tick(_struct):
         return self.__simulate
 
     def __init__(self, dt, orderbook_id, name, bid, ask, close, qty, simulate):
-        super(Tick, self).__init__(orderbook_id, dt)
+        super(Tick, self).__init__('Tick', orderbook_id, dt)
 
         self.__name = name
         self.__bid = bid
@@ -103,15 +109,18 @@ class Tick(_struct):
         self.__simulate = simulate
 
     def to_dict(self):
-        return {'datetime': str(self.datetime),
-                'timestamp': self.timestamp,
-                'orderbook_id': self.orderbook_id,
-                'name': self.__name,
-                'bid': self.__bid,
-                'ask': self.__ask,
-                'close': self.__close,
-                'qty': self.__qty,
-                'simulate': self.__simulate}
+        return {
+            'type': self.type,
+            'datetime': str(self.datetime),
+            'timestamp': self.timestamp,
+            'orderbook_id': self.orderbook_id,
+            'name': self.__name,
+            'bid': self.__bid,
+            'ask': self.__ask,
+            'close': self.__close,
+            'qty': self.__qty,
+            'simulate': self.__simulate
+        }
 
     @classmethod
     def from_dict(cls, dict_data):
@@ -242,8 +251,7 @@ class QuoteData(_struct):
         return self.__simulate
 
     def __init__(self, dt, *args, **kwargs):
-
-        super(QuoteData, self).__init__(kwargs['orderbook_id'], dt)
+        super(QuoteData, self).__init__('Quote', kwargs['orderbook_id'], dt)
 
         self.__name = kwargs['name']
 
@@ -271,27 +279,30 @@ class QuoteData(_struct):
         self.__simulate = kwargs['simulate']
 
     def to_dict(self):
-        return {'datetime': str(self.datetime),
-                'timestamp': self.timestamp,
-                'orderbook_id': self.orderbook_id,
-                'name': self.__name,
-                'high_price': self.__high_price,
-                'open_price': self.__open_price,
-                'low_price': self.__low_price,
-                'close_price': self.__close_price,
-                'bid_price': self.__bid_price,
-                'bid_qty': self.__bid_qty,
-                'ask_price': self.__ask_price,
-                'ask_qty': self.__ask_qty,
-                'buy_qty': self.__buy_qty,
-                'sell_qty': self.__sell_qty,
-                'tick_qty': self.__tick_qty,
-                'total_qty': self.__total_qty,
-                'ref_qty': self.__ref_qty,
-                'ref_price': self.__ref_price,
-                'up_price': self.__up_price,
-                'down_price': self.__down_price,
-                'simulate': self.__simulate}
+        return {
+            'type': self.type,
+            'datetime': str(self.datetime),
+            'timestamp': self.timestamp,
+            'orderbook_id': self.orderbook_id,
+            'name': self.__name,
+            'high_price': self.__high_price,
+            'open_price': self.__open_price,
+            'low_price': self.__low_price,
+            'close_price': self.__close_price,
+            'bid_price': self.__bid_price,
+            'bid_qty': self.__bid_qty,
+            'ask_price': self.__ask_price,
+            'ask_qty': self.__ask_qty,
+            'buy_qty': self.__buy_qty,
+            'sell_qty': self.__sell_qty,
+            'tick_qty': self.__tick_qty,
+            'total_qty': self.__total_qty,
+            'ref_qty': self.__ref_qty,
+            'ref_price': self.__ref_price,
+            'up_price': self.__up_price,
+            'down_price': self.__down_price,
+            'simulate': self.__simulate
+        }
 
     @classmethod
     def from_dict(cls, dict_data):
@@ -430,7 +441,7 @@ class KBar(_struct):
             self.__foot = self.__close_price
 
     def __init__(self, orderbook_id, dt, open_price, high_price, low_price, close_price, qty):
-        super(KBar, self).__init__(orderbook_id, dt)
+        super(KBar, self).__init__('Candlestick', orderbook_id, dt)
 
         self.__open_price = float(open_price)
         self.__high_price = float(high_price)
@@ -465,14 +476,17 @@ class KBar(_struct):
 
     def to_dict(self, detail=False):
         d = {}
-        b = {'orderbook_id': str(self.orderbook_id),
-             'datetime': str(self.datetime),
-             'timestamp': self.timestamp,
-             'open_price': self.__open_price,
-             'high_price': self.__high_price,
-             'low_price': self.__low_price,
-             'close_price': self.__close_price,
-             'qty': self.__qty}
+        b = {
+            'type': self.type,
+            'orderbook_id': str(self.orderbook_id),
+            'datetime': str(self.datetime),
+            'timestamp': self.timestamp,
+            'open_price': self.__open_price,
+            'high_price': self.__high_price,
+            'low_price': self.__low_price,
+            'close_price': self.__close_price,
+            'qty': self.__qty
+        }
 
         if detail:
             d = {'bar': self.__bar,
@@ -553,7 +567,7 @@ class BestFivePrice(_struct):
         return self.__ask
 
     def __init__(self, orderbook_id, dt, bid_py, ask_py):
-        super(BestFivePrice, self).__init__(orderbook_id, dt)
+        super(BestFivePrice, self).__init__('FiveCommissioned', orderbook_id, dt)
 
         self.update(bid_py, ask_py)
 
@@ -566,11 +580,14 @@ class BestFivePrice(_struct):
             self.__ask[i] = ask_py[i]
 
     def to_dict(self):
-        d = {'orderbook_id': str(self.orderbook_id),
-             'datetime': str(self.datetime),
-             'timestamp': self.timestamp,
-             'bid': [],
-             'ask': []}
+        d = {
+            'type': self.type,
+            'orderbook_id': str(self.orderbook_id),
+            'datetime': str(self.datetime),
+            'timestamp': self.timestamp,
+            'bid': [],
+            'ask': []
+        }
 
         for i in range(5):
             d['bid'].append(self.__bid[i].to_dict())

@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.0.5
+
+### Feature {#feat_0_0_5}
+
+* feat: update error return code table
+* feat: add configuration compatibility
+* feat: add sqlalchemy extension with liqueur
+* feat: upgrade capital api to 2.13.23
+* feat: applog module
+
+### Bug fixes {#fix_0_0_5}
+
+* fix: generate comtypes cache when api install and move to util.py
+* fix: package require issue
+* fix: lacks argments in auto install class
+
 ## 0.0.4
 
 ### Bug fixes {#fix_0_0_4}

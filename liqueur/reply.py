@@ -3,8 +3,7 @@ from .dll import Component
 
 class Reply(Component):
     def __init__(self):
-        super(Reply, self).__init__()
-        self._component = self._Component__component_generator('reply')
+        super(Reply, self).__init__('reply')
 
     def connect_by_id(self, bstrUserID):
         return self._component.SKReplyLib_ConnectByID(bstrUserID)

@@ -3,11 +3,7 @@ from .dll import Component
 
 class Center(Component):
     def __init__(self):
-        super(Center, self).__init__()
-        self._component = self._Component__component_generator('center')
-
-    def hook_event(self, event):
-        return cc.GetEvents(self._component, event)
+        super(Center, self).__init__('center')
 
     def set_log_path(self, bstrPath):
         return self._component.SKCenterLib_SetLogPath(bstrPath)
