@@ -11,6 +11,7 @@ import win32com.client as wc
 import site
 import shutil
 import ssl
+import json
 
 # work around for ssl certification
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -225,3 +226,57 @@ class LookupDict(dict):
 
     def get(self, key, default=None):
         return self.__dict__.get(key, default)
+
+
+class Attributes(dict):
+    def __init__(self, iterable):
+        if not isinstance(iterable, dict):
+            raise TypeError
+        for k, v in iterable.items():
+            if isinstance(v, (list, tuple)):
+                setattr(self, k, [Attributes(x) if isinstance(x, dict) else x for x in v])
+            else:
+                setattr(self, k, Attributes(v) if isinstance(v, dict) else v)
+
+    def __contains__(self, k):
+        try:
+            return dict.__contains__(self, k) or hasattr(self, k)
+        except:
+            return False
+
+    def __getattr__(self, k):
+        try:
+            # Throws exception if not in prototype chain
+            return object.__getattribute__(self, k)
+        except AttributeError:
+            try:
+                return self[k]
+            except KeyError:
+                raise AttributeError(k)
+
+    def __setattr__(self, k, v):
+        try:
+            # Throws exception if not in prototype chain
+            object.__getattribute__(self, k)
+        except AttributeError:
+            try:
+                self[k] = v
+            except:
+                raise AttributeError(k)
+        else:
+            object.__setattr__(self, k, v)
+
+    def __delattr__(self, k):
+        try:
+            # Throws exception if not in prototype chain
+            object.__getattribute__(self, k)
+        except AttributeError:
+            try:
+                del self[k]
+            except KeyError:
+                raise AttributeError(k)
+        else:
+            object.__delattr__(self, k)
+
+    def __str__(self):
+        return json.dumps(self, indent=4, ensure_ascii=False)

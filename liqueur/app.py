@@ -230,21 +230,7 @@ class Liqueur:
         Raises:
             AttributeError: The configuration lacks necessary attributes.
         '''
-        if 'account' not in self.__config:
-            raise AttributeError(
-                'Invalid config format!'
-                'The \"account\" attribute doesn\'t exist!'
-            )
-
-        account_conf = self.__config['account']
-
-        if 'username' not in account_conf or 'password' not in account_conf:
-            raise AttributeError(
-                'Invalid config format! '
-                'The \"username\" or \"password\" attribute doesn\'t exist!'
-            )
-
-        err = self.__center.login(account_conf['username'], account_conf['password'])
+        err = self.__center.login(self.config.username, self.config.password)
         if self._corelog(err, logging.INFO, 'Login...ok'):
             return
 
@@ -402,18 +388,14 @@ class Liqueur:
         self.__reply = Reply()
 
         self.__config = conf
-        if 'subscription' in self.__config:
-            self.subscription_mgr = SubscriptionMgr(
-                self.__config['subscription'])
-        else:
-            self.subscription_mgr = SubscriptionMgr()
+        self.subscription_mgr = SubscriptionMgr(conf.subscription)
 
         logging.basicConfig(level=logging.INFO, format="[%(asctime)s][%(name)s][%(levelname)s]: %(message)s")
         self.__applog = logging.getLogger('liqueur')
         self.__corelog = logging.getLogger('liqueur.core')
 
-        if 'sqlalchemy' in conf:
-            db = LiqueurSqlAlchemy(self, conf['sqlalchemy'])
+        if getattr(conf, 'sqlalchemy') is not None:
+            db = LiqueurSqlAlchemy(self, conf.sqlalchemy)
             self._add_extension(db)
             self.append_tick_delegate(db.on_tick)
             self.append_kbar_delegate(db.on_candlestick)
