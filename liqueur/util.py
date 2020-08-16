@@ -10,6 +10,10 @@ from zipfile import ZipFile
 import win32com.client as wc
 import site
 import shutil
+import ssl
+
+# work around for ssl certification
+ssl._create_default_https_context = ssl._create_unverified_context
 
 _MS_CPP_REDISTRIBUTABLE_PACKAGES_URL = 'https://download.microsoft.com/download/1/6/5/' + \
     '165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x64.exe'
