@@ -9,7 +9,9 @@ from .quote import Quote
 from .reply import Reply
 from .codes import err_codes, kbar_type, kbar_out_type, kbar_trade_session
 from .structure import Tick, QuoteData, KBar, PriceQty, BestFivePrice
+
 from .sqlalchemy import LiqueurSqlAlchemy
+from .applog import AppLog
 
 
 Today = datetime.today()
@@ -144,9 +146,8 @@ class Liqueur:
     __quote = None
     __reply = None
 
-    __config = {}
+    __config = None
     __alive = True
-    __applog = None
     __corelog = None
     __shutdown = 0
 
@@ -159,6 +160,7 @@ class Liqueur:
     __stocks_of_market_delegation = {}
 
     # Public variable
+    log = None
     subscription_mgr = None
 
     # Property
@@ -189,11 +191,11 @@ class Liqueur:
             return True
 
         log_fn = {
-            logging.INFO: self.__applog.info,
-            logging.WARN: self.__applog.warning,
-            logging.ERROR: self.__applog.error,
-            logging.CRITICAL: self.__applog.critical,
-        }.get(level, self.__applog.debug)
+            logging.INFO: self.log.info,
+            logging.WARN: self.log.warn,
+            logging.ERROR: self.log.error,
+            logging.CRITICAL: self.log.crit,
+        }.get(level, self.log.debug)
 
         if message != '':
             log_fn(message)
@@ -202,7 +204,7 @@ class Liqueur:
 
     def _add_extension(self, t):
         if not isinstance(t, Thread):
-            self.__applog.error('the class is not inheritance from Thread')
+            self.log.error('the class is not inheritance from Thread')
             return
 
         self.__extension.append(t)
@@ -363,12 +365,12 @@ class Liqueur:
 
     def _on_time(self, dt):
         if True:
-            self.__applog.info(dt)
+            self.log.info(dt)
 
         if Today.replace(hour=14, minute=45) < dt:
             self.__shutdown += 1
             if self.__shutdown >= 60:
-                self.__applog.info('cheers!')
+                self.log.info('cheers!')
                 self.stop()
 
     def __init__(self, conf):
@@ -390,11 +392,11 @@ class Liqueur:
         self.__config = conf
         self.subscription_mgr = SubscriptionMgr(conf.subscription)
 
-        logging.basicConfig(level=logging.INFO, format="[%(asctime)s][%(name)s][%(levelname)s]: %(message)s")
-        self.__applog = logging.getLogger('liqueur')
-        self.__corelog = logging.getLogger('liqueur.core')
+        applog = AppLog(conf.applog)
+        self.log = applog.get('liqueur')
+        self.__corelog = applog.get('liqueur.core')
 
-        if getattr(conf, 'sqlalchemy') is not None:
+        if 'sqlalchemy' in conf:
             db = LiqueurSqlAlchemy(self, conf.sqlalchemy)
             self._add_extension(db)
             self.append_tick_delegate(db.on_tick)
@@ -438,16 +440,16 @@ class Liqueur:
             return
 
         if nKind == err_codes.subject_connection_connected:
-            self.__applog.info('Session...established')
+            self.log.info('Session...established')
         elif nKind == err_codes.subject_connection_disconnect:
-            self.__applog.warning('Session...disconnect')
+            self.log.warning('Session...disconnect')
             self.__alive = False
         elif nKind == err_codes.subject_connection_stocks_ready:
-            self.__applog.info('Session...ready')
+            self.log.info('Session...ready')
             self._send_heartbeat()
             self._subscription()
         elif nKind == err_codes.subject_connection_fail:
-            self.__applog.error('Connection failure')
+            self.log.error('Connection failure')
             self.__alive = False
         else:
             self._corelog(nKind)
