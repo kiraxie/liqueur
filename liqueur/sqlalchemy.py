@@ -2,17 +2,17 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Column, DateTime, Integer, String, Float, Boolean
 from sqlalchemy.ext.declarative import declarative_base
-import logging
-from threading import Thread
-from queue import Queue, Empty
+from datetime import datetime
+
+from .extention import Extention
+from .applog import AppLog
+from .codes import subscribe_type
+
+base = declarative_base()
+log = AppLog.get('db')
 
 
-Base = declarative_base()
-_WAIT_DEFAULT_TIMEOUT = 1
-_WAIT_MAX_TIMEOUT = 60
-
-
-class OrderCandlestick(Base):
+class TableCandlestick(base):
     __tablename__ = 'candlestick'
     id = Column(String(10), nullable=False, primary_key=True)
     datatime = Column(DateTime, nullable=False, primary_key=True)
@@ -42,7 +42,7 @@ class OrderCandlestick(Base):
             self.quantity)
 
 
-class OrderTick(Base):
+class TableTick(base):
     __tablename__ = 'tick'
     id = Column(String(10), nullable=False, primary_key=True)
     datatime = Column(DateTime, nullable=False, primary_key=True)
@@ -72,7 +72,7 @@ class OrderTick(Base):
             self.simulate)
 
 
-class OrderQuote(Base):
+class TableQuote(base):
     __tablename__ = 'quote'
     id = Column(String(10), nullable=False, primary_key=True)
     datatime = Column(DateTime, nullable=False, primary_key=True)
@@ -96,80 +96,38 @@ class OrderQuote(Base):
             self.simulate)
 
 
-class LiqueurSqlAlchemy(Thread):
+class LiqueurSqlAlchemy(Extention):
     app = None
     _engine = None
-    __queue = None
-    __timeout = _WAIT_DEFAULT_TIMEOUT
-    __alive = True
-    log = logging.getLogger('liqueur.sql')
+    subscriber = None
+    _session = None
 
-    def __init__(self, app, conf):
+    def __init__(self, app, subscriber, conf):
         super(LiqueurSqlAlchemy, self).__init__(name="SqlAlchemy")
         self.app = app
-        self.__queue = Queue(conf['queue_size'])
-        self._engine = create_engine(conf['host'], echo=conf['echo'])
-
-    def __del(self):
-        self.__session.close()
-
-    def on_tick(self, t):
-        self.__queue.put(t.to_dict())
-
-    def on_candlestick(self, c):
-        self.__queue.put(c.to_dict())
-
-    def on_quote(self, q):
-        self.__queue.put(q.to_dict())
-
-    def stop(self):
-        self.__alive = False
-
-    def run(self):
-        Base.metadata.create_all(self._engine)
+        self.subscriber = subscriber
+        self._engine = create_engine(conf.host, echo=conf.echo)
+        base.metadata.create_all(self._engine)
         maker = sessionmaker(bind=self._engine)
-        session = maker()
+        self._session = maker()
 
-        while self.__alive:
-            try:
-                v = self.__queue.get(block=False, timeout=self.__timeout)
-                self.__timeout = _WAIT_DEFAULT_TIMEOUT
-                obj = None
+    def __del__(self):
+        self._session.close()
 
-                if v['type'] == 'Tick':
-                    obj = OrderTick(
-                        v['orderbook_id'],
-                        v['datetime'],
-                        v['bid'],
-                        v['ask'],
-                        v['close'],
-                        v['qty'],
-                        v['simulate'])
-                    if session.query(OrderTick).filter_by(
-                            id=v['orderbook_id']).filter_by(
-                            datatime=v['datetime']).first():
-                        continue
-
-                elif v['type'] == 'Candlestick':
-                    obj = OrderCandlestick(
-                        v['orderbook_id'],
-                        v['datetime'],
-                        v['open_price'],
-                        v['high_price'],
-                        v['low_price'],
-                        v['close_price'],
-                        v['qty'])
-                elif v['type'] == 'Quote':
-                    obj = OrderQuote(v['orderbook_id'], v['datetime'], v['close_price'], v['qty'], v['simulate'])
-                else:
-                    self.log.warning(v)
-                    continue
-
-                session.add(obj)
-                if self.__queue.empty():
-                    session.commit()
-            except Empty:
-                if self.__timeout < _WAIT_MAX_TIMEOUT:
-                    self.__timeout += 1
-
-        session.close()
+    def on_quote(self, v):
+        if v.category == subscribe_type.tick:
+            if self._session.query(TableTick).filter_by(
+                    id=v.orderbook_id).filter_by(
+                    datatime=datetime.fromtimestamp(v.timestamp)).first():
+                return
+            self._session.add(TableTick(v.orderbook_id, datetime.fromtimestamp(
+                v.timestamp), v.bid, v.ask, v.close, v.qty, v.simulate))
+        elif v.category == subscribe_type.candlestick:
+            if self._session.query(TableCandlestick).filter_by(
+                    id=v.orderbook_id).filter_by(
+                    datatime=datetime.fromtimestamp(v.timestamp)).first():
+                return
+            self._session.add(
+                TableCandlestick(
+                    v.orderbook_id, datetime.fromtimestamp(v.timestamp),
+                    v.open, v.high, v.low, v.close, v.qty))

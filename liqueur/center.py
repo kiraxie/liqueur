@@ -2,14 +2,20 @@ from .dll import Component
 
 
 class Center(Component):
-    def __init__(self):
+    _username = ''
+    _password = ''
+
+    def __init__(self, conf):
         super(Center, self).__init__('center')
+
+        self._username = conf.username
+        self._password = conf.password
 
     def set_log_path(self, bstrPath):
         return self._component.SKCenterLib_SetLogPath(bstrPath)
 
-    def login(self, bstrUserID, bstrPassword):
-        return self._component.SKCenterLib_Login(bstrUserID, bstrPassword)
+    def login(self):
+        return self._component.SKCenterLib_Login(self._username, self._password)
 
     def get_return_code_msg(self, nCode):
         return self._component.SKCenterLib_GetReturnCodeMessage(nCode)

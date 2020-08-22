@@ -1,13 +1,5 @@
 import logging
-from .util import Attributes
-
-Level = Attributes({
-    'CRIT': logging.CRITICAL,
-    'ERROR': logging.ERROR,
-    'WARN': logging.WARN,
-    'INFO': logging.INFO,
-    'DEBUG': logging.DEBUG
-})
+from .codes import log_level
 
 
 class AppLog:
@@ -20,11 +12,12 @@ class AppLog:
 
     def __init__(self, cfg):
         logging.basicConfig(
-            level=cfg.level, format='%(asctime)s %(name)-7s %(levelname)s %(filename)s:%(lineno)d %(message)s',
+            level=log_level[cfg.level],
+            format='[%(asctime)s][%(name)-7s][%(levelname)s] %(message)s',
             datefmt='%Y%m%d %H:%M:%S')
+
         for mod_name, level in cfg.mod_level.items():
-            log = logging.getLogger(mod_name)
-            log.setLevel(level)
+            logging.getLogger(mod_name).setLevel(log_level[level])
 
     @staticmethod
     def get(mod_name):

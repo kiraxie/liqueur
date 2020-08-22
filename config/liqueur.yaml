@@ -1,9 +1,13 @@
-account:
-  username: "A123456789"
-  password: "xxxxxxxxxx"
-subscription:
-  detail: ['TX00']
+applog:
+  level: "INFO"
+  mod_level:
+    sqlalchemy: "WARN"
+    comtypes: "ERROR"
+username: "A123456789"
+password: "xxxxxxxxxx"
+marketboard:
+  subscription:
+    tick: ["TX00"]
 sqlalchemy:
-  queue_size: 1024
   host: "splite://"
-  echo: true
+  echo: false

@@ -31,6 +31,7 @@ setup(
         'requests >= 2.23.0; platform_system=="Windows"',
         'sqlalchemy >= 1.3.17; platform_system=="Windows"',
         'pyyaml >= 5.3.1; platform_system=="Windows"',
+        'pyzmq >= 19.0.2; platform_system=="Windows"',
     ],
     include_package_data=True,
     platforms=[

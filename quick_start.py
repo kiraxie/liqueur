@@ -1,6 +1,7 @@
 import os
 import pathlib
-from liqueur import Liqueur, Config
+from liqueur import Liqueur, AppConfig
+from datetime import datetime
 import signal
 
 
@@ -12,19 +13,6 @@ class ServiceExit(Exception):
     pass
 
 
-app = Liqueur(Config.from_yaml(pathlib.Path('./config/liqueur.yaml').absolute()))
-
-
-@app.hook_kbar()
-def k_handler(k):
-    pass
-
-
-@app.hook_tick()
-def t_handler(t):
-    pass
-
-
 def service_shutdown(signum, frame):
     raise ServiceExit
 
@@ -33,8 +21,11 @@ def main():
     signal.signal(signal.SIGTERM, service_shutdown)
     signal.signal(signal.SIGINT, service_shutdown)
 
+    cfg = AppConfig(pathlib.Path('./config/liqueur.yaml').absolute())
+    app = Liqueur(cfg)
+
     try:
-        app.run()
+        app.start()
     except ServiceExit:
         app.stop()
 
