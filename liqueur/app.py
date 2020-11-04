@@ -5,7 +5,7 @@ from datetime import datetime
 from .center import Center
 from .quote import Quote
 from .reply import Reply
-from .codes import err_codes, subscribe_type
+from .codes import err_codes
 from .util import Attributes
 from .marketboard import MarketBoard
 from .sqlalchemy import LiqueurSqlAlchemy
@@ -74,6 +74,8 @@ class Liqueur:
 
         self._market_board = MarketBoard(Attributes({
             'stop': self.stop,
+            'connect': self.__quote.enter_monitor,
+            'disconnect': self.__quote.leave_monitor,
             'corelog': self._corelog,
             'send_heartbeat': self._send_heartbeat,
             'get_profile': self.__quote.get_stock_by_index,
@@ -83,8 +85,9 @@ class Liqueur:
             'on_quote': self._extention_mgr.on_quote,
         }), conf.marketboard)
 
-        self._extention_mgr.add('db', LiqueurSqlAlchemy(
-            self, self._market_board.subscriber(subscribe_type.all), conf.sqlalchemy))
+        self._extention_mgr.add('db', LiqueurSqlAlchemy(Attributes({
+            'stop': self.stop,
+        }), conf.sqlalchemy))
 
     def __del__(self):
         if self.__center is not None:
@@ -101,6 +104,7 @@ class Liqueur:
     # Public function
     def start(self):
         (qhandler, rhandler) = (self.__quote.hook_event(self._market_board), self.__reply.hook_event(self))
+        self._extention_mgr.start()
 
         try:
             self._login()
@@ -111,8 +115,10 @@ class Liqueur:
         while self._alive:
             pythoncom.PumpWaitingMessages()
 
+        self._extention_mgr.wait()
+
     def stop(self):
         if self._alive:
             self._alive = False
             self.__quote.leave_monitor()
-            self._extention_mgr.cleanup()
+            self._extention_mgr.stop()

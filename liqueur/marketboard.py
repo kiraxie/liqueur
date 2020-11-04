@@ -1,14 +1,15 @@
 import math
 
 from datetime import datetime
+from decimal import Decimal
 from .codes import err_codes, candlestick_type, candlestick_output_type, candlestick_trade_session, subscribe_type
-from .structure import Tick, Candlestick, Trade, Quotation
 from .applog import AppLog
+from .schema import Tick, Candlestick
 
 log = AppLog.get('marketboard')
 
 
-class MarketBoard():
+class MarketBoard:
     app = None
     _cfg = None
 
@@ -42,7 +43,8 @@ class MarketBoard():
             (('%d:%d:%d') % (sHour, sMinute, sSecond)), '%H:%M:%S').time())
         log.info(dt)
         self.app.send_heartbeat(dt)
-        # market event
+        if dt.hour > 14:
+            self.app.disconnect()
 
     def OnConnection(self, nKind, nCode):
         if self.app.corelog(nCode):
@@ -52,8 +54,11 @@ class MarketBoard():
         if nKind == err_codes.subject_connection_connected:
             log.info('Session...established')
         elif nKind == err_codes.subject_connection_disconnect:
-            log.warning('Session...disconnect')
-            self.app.stop()
+            log.warn('Session...disconnect')
+
+            if datetime.now().hour < 14 and self.app.corelog(self.app.connect()):
+                self.stop()
+                return
         elif nKind == err_codes.subject_connection_stocks_ready:
             log.info('Session...ready')
             self.app.send_heartbeat()
@@ -81,13 +86,12 @@ class MarketBoard():
         dt = datetime(_year, _mon, _day, _hour, _min, _sec, nTimemillismicros)
 
         orderbook_id = p_stock.bstrStockNo
-        orderbook_code = p_stock.bstrStockName
         cardinal_num = math.pow(10, p_stock.sDecimal)
-        bid = float(nBid / cardinal_num)
-        ask = float(nAsk / cardinal_num)
-        close = float(nClose / cardinal_num)
+        bid = Decimal(nBid / cardinal_num)
+        ask = Decimal(nAsk / cardinal_num)
+        close = Decimal(nClose / cardinal_num)
 
-        tick = Tick(orderbook_id, dt, orderbook_code, bid, ask, close, nQty, nSimulate)
+        tick = Tick(orderbook_id, dt, bid, ask, close, nQty, nSimulate)
         self.app.on_quote(tick)
 
     def OnNotifyTicks(
@@ -120,25 +124,3 @@ class MarketBoard():
                 s = stock_info.split(',')
                 stock_list.append(s[0])
         self.app.on_quote(stock_list)
-
-    def OnNotifyBest5(self, sMarketNo, sStockidx, nBestBid1, nBestBidQty1, nBestBid2, nBestBidQty2, nBestBid3,
-                      nBestBidQty3, nBestBid4, nBestBidQty4, nBestBid5, nBestBidQty5, nExtendBid, nExtendBidQty,
-                      nBestAsk1, nBestAskQty1, nBestAsk2, nBestAskQty2, nBestAsk3, nBestAskQty3, nBestAsk4,
-                      nBestAskQty4, nBestAsk5, nBestAskQty5, nExtendAsk, nExtendAskQty, nSimulate):
-        (p_stock, err) = self.app.get_profile(sMarketNo, sStockidx)
-        if self.app.corelog(err):
-            return
-
-        quotation = Quotation(
-            p_stock.bstrStockNo, datetime.now(),
-            [Trade(nBestBid1, nBestBidQty1),
-             Trade(nBestBid2, nBestBidQty2),
-             Trade(nBestBid3, nBestBidQty3),
-             Trade(nBestBid4, nBestBidQty4),
-             Trade(nBestBid5, nBestBidQty5)],
-            [Trade(nBestAsk1, nBestAskQty1),
-             Trade(nBestAsk2, nBestAskQty2),
-             Trade(nBestAsk3, nBestAskQty3),
-             Trade(nBestAsk4, nBestAskQty4),
-             Trade(nBestAsk5, nBestAskQty5)])
-        self.app.on_quote(quotation)

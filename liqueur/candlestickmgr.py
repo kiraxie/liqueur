@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
 from .util import Attributes
-from .structure import Candlestick
+from .schema import Candlestick
 from .applog import AppLog
 
 log = AppLog.get('candlestick')

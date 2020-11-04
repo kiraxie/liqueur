@@ -1,5 +1,5 @@
 from .app import Liqueur
-from .structure import Tick, Candlestick, Quotation
+from .schema import Tick, Candlestick
 from .codes import err_codes
 from .appconf import AppConfig
 
