@@ -176,7 +176,7 @@ class CapitalAPIHelper(Helper):
         #               "expanduser" method instead of "as_posix" method
         if not self._powershell_exec('regsvr32', [self.__dll_file.expanduser()], True):
             raise WindowsError('Install Capital API failure!\n' + self.stderr)
-        comtypes.client.GetModule(self.__dll_file)
+        comtypes.client.GetModule(self.__dll_file.as_posix())
         self._get_curr_ver()
 
     def uninstall(self):
