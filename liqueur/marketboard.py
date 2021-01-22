@@ -1,21 +1,47 @@
 import math
 
-from datetime import datetime
+from datetime import datetime, MINYEAR
 from decimal import Decimal
+
 from .codes import err_codes, candlestick_type, candlestick_output_type, candlestick_trade_session, subscribe_type
 from .applog import AppLog
 from .schema import Tick, Candlestick
+from .event import EventManager, Event
 
 log = AppLog.get('marketboard')
+
+MARKET_QUOTE: str = 'market_quote'
+market_orderbook_list: str = 'market_orderbook_list'
+market_event: str = 'market_event'
+heartbeat: str = 'heartbeat'
 
 
 class MarketBoard:
     app = None
-    _cfg = None
 
-    def __init__(self, app, cfg):
+    def __init__(self, eventmgr: EventManager, app, cfg):
+        self._eventmgr: EventManager = eventmgr
         self.app = app
-        self._cfg = cfg
+
+        def timer_print(dt: datetime):
+            log.debug(datetime.combine(datetime.now(), dt.time()))
+        self._eventmgr.register_callback(heartbeat, timer_print)
+
+        def market_event_handler(t):
+            if t == err_codes.subject_connection_connected:
+                log.info('Session...established')
+            elif t == err_codes.subject_connection_disconnect:
+                log.warn('Session...disconnect')
+            elif t == err_codes.subject_connection_stocks_ready:
+                log.info('Session...ready')
+                self.app.send_heartbeat()
+                self.subscribe(cfg.subscription)
+            elif t == err_codes.subject_connection_fail:
+                log.error('Connection failure')
+                self.app.stop()
+            else:
+                self.app.corelog(t)
+        self._eventmgr.register_callback(market_event, market_event_handler)
 
     def __del__(self):
         pass
@@ -39,35 +65,17 @@ class MarketBoard:
                             candlestick_trade_session.daylight))
 
     def OnNotifyServerTime(self, sHour, sMinute, sSecond, nTotal):
-        dt = datetime.combine(datetime.now(), datetime.strptime(
-            (('%d:%d:%d') % (sHour, sMinute, sSecond)), '%H:%M:%S').time())
-        log.info(dt)
-        self.app.send_heartbeat(dt)
-        if dt.hour > 14:
-            self.app.disconnect()
+        dt: datetime = datetime.combine(datetime.now(), datetime(MINYEAR, 1, 1, sHour, sMinute, sSecond, 0).time())
+        self._eventmgr.put(Event(heartbeat, dt))
+
+        if dt.second % 10 != 0:
+            self.app.send_heartbeat()
 
     def OnConnection(self, nKind, nCode):
         if self.app.corelog(nCode):
             self.stop()
             return
-
-        if nKind == err_codes.subject_connection_connected:
-            log.info('Session...established')
-        elif nKind == err_codes.subject_connection_disconnect:
-            log.warn('Session...disconnect')
-
-            if datetime.now().hour < 14 and self.app.corelog(self.app.connect()):
-                self.stop()
-                return
-        elif nKind == err_codes.subject_connection_stocks_ready:
-            log.info('Session...ready')
-            self.app.send_heartbeat()
-            self.subscribe(self._cfg.subscription)
-        elif nKind == err_codes.subject_connection_fail:
-            log.error('Connection failure')
-            self.app.stop()
-        else:
-            self.app.corelog(nKind)
+        self._eventmgr.put(Event(market_event, nKind))
 
     def _on_notify_tick(
             self, sMarketNo, sIndex, nPtr, nDate, nTimehms, nTimemillismicros, nBid, nAsk, nClose, nQty, nSimulate):
@@ -92,7 +100,7 @@ class MarketBoard:
         close = Decimal(nClose / cardinal_num)
 
         tick = Tick(orderbook_id, dt, bid, ask, close, nQty, nSimulate)
-        self.app.on_quote(tick)
+        self._eventmgr.put(Event(MARKET_QUOTE, tick))
 
     def OnNotifyTicks(
             self, sMarketNo, sIndex, nPtr, nDate, nTimehms, nTimemillismicros, nBid, nAsk, nClose, nQty, nSimulate):
@@ -115,7 +123,7 @@ class MarketBoard:
             dt = datetime.strptime(time_string, '%Y/%m/%d')
 
         candlestick = Candlestick(bstrStockNo, dt, open_price, high_price, low_price, close_price, qty)
-        self.app.on_quote(candlestick)
+        self.eventmgr(Event(MARKET_QUOTE, candlestick))
 
     def OnNotifyStockList(self, sMarketNo, bstrStockData):
         stock_list = []
@@ -123,4 +131,4 @@ class MarketBoard:
             for stock_info in stock_category.split(';'):
                 s = stock_info.split(',')
                 stock_list.append(s[0])
-        self.app.on_quote(stock_list)
+        self.eventmgr(Event(market_orderbook_list, stock_list))
