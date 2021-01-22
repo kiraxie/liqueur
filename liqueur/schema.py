@@ -1,14 +1,9 @@
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy import Column, DateTime, Integer, String, Float, Boolean
-from uuid import uuid4
-
-SchemaBase = declarative_base()
+from .database import SchemaBase, UUID, gen_uuid, Column, DateTime, Integer, String, Float, Boolean
 
 
 class Candlestick(SchemaBase):
     __tablename__ = 'candlesticks'
-    id = Column(UUID(as_uuid=True), default=uuid4, nullable=False, primary_key=True)
+    id = Column(UUID(as_uuid=True), default=gen_uuid, nullable=False, primary_key=True)
     orderbook_id = Column(String(10), nullable=False)
     created_at = Column(DateTime, nullable=False, primary_key=True)
     open = Column(Float, nullable=False)
@@ -64,7 +59,7 @@ class Candlestick(SchemaBase):
             self._foot = self.close
 
     def __init__(self, orderbook_id, created_at, open, high, low, close, quantity):
-        self.id = uuid4()
+        self.id = gen_uuid()
         self.orderbook_id = orderbook_id
         self.created_at = created_at
         self.open = open
@@ -86,27 +81,10 @@ class Candlestick(SchemaBase):
             self.close,
             self.quantity)
 
-    def create(self, session) -> None:
-        session.add(self)
-        session.commit()
-
-    def first_or_create(self, session):
-        instance = session.query(Candlestick).filter(
-            orderbook_id=self.orderbook_id,
-            created_at=self.created_at).first()
-
-        if instance:
-            return instance
-
-        session.add(self)
-        session.commit()
-
-        return self
-
 
 class Tick(SchemaBase):
     __tablename__ = 'ticks'
-    id = Column(UUID(as_uuid=True), default=uuid4, nullable=False, primary_key=True)
+    id = Column(UUID(as_uuid=True), default=gen_uuid, nullable=False, primary_key=True)
     orderbook_id = Column(String(10), nullable=False)
     created_at = Column(DateTime, nullable=False, primary_key=True)
     bid = Column(Float, nullable=False)
@@ -116,7 +94,7 @@ class Tick(SchemaBase):
     simulate = Column(Boolean, nullable=False)
 
     def __init__(self, orderbook_id, created_at, bid, ask, close, quantity, simulate):
-        self.id = uuid4()
+        self.id = gen_uuid()
         self.orderbook_id = orderbook_id
         self.created_at = created_at
         self.bid = bid
@@ -135,22 +113,3 @@ class Tick(SchemaBase):
             self.close,
             self.quantity,
             self.simulate)
-
-    def create(self, session) -> None:
-        session.add(self)
-        session.commit()
-
-    def first_or_create(self, session):
-        instance = session.query(Tick).filter(
-            orderbook_id=self.orderbook_id,
-            created_at=self.created_at,
-            close=self.close,
-            quantity=self.quantity).first()
-
-        if instance:
-            return instance
-
-        session.add(self)
-        session.commit()
-
-        return self

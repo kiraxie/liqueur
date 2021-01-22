@@ -8,16 +8,14 @@ log = AppLog.get('extention')
 
 
 class Extention(Thread):
-    _alive = True
+    _alive: bool = True
 
-    def __init__(self, name):
+    def __init__(self, name: str):
         super(Extention, self).__init__(name=name)
+        self.name: str = name
 
     def stop(self):
         self._alive = False
-
-    def on_quote(self, v):
-        raise NotImplementedError
 
 
 class ExtentionManager:
@@ -47,10 +45,10 @@ class ExtentionManager:
             log.debug("stop %s" % name)
             e.stop()
 
-    def add(self, name, e):
+    def add(self, e: Extention):
         if not isinstance(e, Extention):
             raise TypeError
-        self._extentions[name] = e
+        self._extentions[e.name] = e
         if self._started:
             e.start()
 
@@ -66,10 +64,6 @@ class ExtentionManager:
         for name, e in self._extentions.items():
             log.debug("wait %s" % name)
             e.join()
-
-    def on_quote(self, v):
-        for e in self._extentions.values():
-            e.on_quote(v)
 
     def get(self, name):
         return self._extentions.get(name)
